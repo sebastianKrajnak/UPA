@@ -3,7 +3,9 @@
 - Python 3.10 or higher
 - pymongo (`python -m pip install pymongo`)
 - tqdm (`pip install tqdm`)
-- xmltodict ( pip install xmltodict )
+- xmltodict (`pip install xmltodict`)
+- bs4 (`pip install bs4`)
+- requests (`pip install requests`)
 - docker or podman (optional - if you wish to start your own DB in container)
 
 ### Pre-requistes

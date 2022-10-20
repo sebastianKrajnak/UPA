@@ -9,9 +9,9 @@ import requests
 import bs4
 from tqdm import tqdm #status bar for load progress
 
-#CONSTANTS
+# CONSTANTS
 MAIN_URL = 'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/GVD2022.zip'
-MONTHS_URLS ={
+MONTHS_URLS = [
     'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/2021-12',
     'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/2022-01',
     'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/2022-02',
@@ -23,7 +23,7 @@ MONTHS_URLS ={
     'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/2022-08',
     'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/2022-09',
     'https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/2022-10'
-}
+]
 
 
 
@@ -59,32 +59,44 @@ item = collection_name.find_one({'CZPTTCISMessage.CZPTTInformation.CZPTTLocation
 print(item)
  """
 
-
 # Donwload all monthly updates
-if not os.path.exists('data_monthly_updates'):
-    os.mkdir('data_monthly_updates')
-
+def downloadMonths():
     for month in tqdm(MONTHS_URLS, desc = 'Extracting monthly updates total: '):
         # Create a subfolder for each month
         month_n = month.split("/")[-1]
-        path = os.path.join('data_monthly_updates', month_n)
-        os.mkdir(path)
-        # Download all gziped files
-        r = requests.get(month)
-        data = bs4.BeautifulSoup(r.text, "html.parser")
-        
-        for l in tqdm(data.find_all('a'), desc = 'Extracting '+ month_n ):
-            url = 'https://portal.cisjr.cz' + l["href"]
-            # The very first link is a return to previous folder link which breaks the conversion
-            if l["href"] == '/pub/draha/celostatni/szdc/2022/':
-                continue
-            gzip_file = requests.get(url)
-            filename = url.split("/")[-1]
+        path_month = os.path.join('data_monthly_updates', month_n)
+        if not os.path.exists(path_month):
+            os.mkdir(path_month)
+            # Download all gziped files
+            r = requests.get(month)
+            data = bs4.BeautifulSoup(r.text, "html.parser")
+            
+            for l in tqdm(data.find_all('a'), desc = 'Extracting '+ month_n ):
+                url = 'https://portal.cisjr.cz' + l["href"]
+                # The very first link is a return to previous folder link which breaks the conversion
+                if l["href"] == '/pub/draha/celostatni/szdc/2022/':
+                    continue
+                gzip_file = requests.get(url)
+                zip_filename = url.split("/")[-1]
+                xml_filename = zip_filename.removesuffix('.zip')
+                path_xml = os.path.join(path_month, xml_filename)
 
-            # Unpack gzipped files and extract them to seperate folders as seperate xml files
-            with open('data.xml.zip', 'wb') as f:
-                f.write(gzip_file.content)
-            with gzip.open('data.xml.zip', 'r') as f_in, open(path + filename, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-            with open(path + filename, encoding='utf-8') as xml_file:
-                data_dict = xmltodict.parse(xml_file.read(), encoding='utf-8')
+                
+                if '.xml.zip' in zip_filename:
+                    # Unpack gzipped files and extract them to seperate folders as seperate xml files
+                    with open('data.xml.zip', 'wb') as f:
+                        f.write(gzip_file.content)
+                    with gzip.open('data.xml.zip', 'r') as f_in, open(path_xml, 'wb') as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                    with open(path_xml, encoding='utf-8') as xml_file:
+                        data_dict = xmltodict.parse(xml_file.read(), encoding='utf-8')
+                else:
+                    with zipfile.ZipFile(io.BytesIO(gzip_file.content)) as zf:
+                        zf.extract(filename, path_xml)
+                
+
+if not os.path.exists('data_monthly_updates'):
+    os.mkdir('data_monthly_updates')
+    downloadMonths()
+elif os.path.exists('data_monthly_updates') and os.listdir('data_monthly_updates') != len(MONTHS_URLS):
+    downloadMonths()

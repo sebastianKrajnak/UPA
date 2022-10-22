@@ -83,20 +83,24 @@ def downloadMonths():
 
                 
                 if '.xml.zip' in zip_filename:
-                    # Unpack gzipped files and extract them to seperate folders as seperate xml files
-                    with open('data.xml.zip', 'wb') as f:
-                        f.write(gzip_file.content)
-                    with gzip.open('data.xml.zip', 'r') as f_in, open(path_xml, 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-                    with open(path_xml, encoding='utf-8') as xml_file:
-                        data_dict = xmltodict.parse(xml_file.read(), encoding='utf-8')
+                    try:
+                        # Unpack gzipped files and extract them to seperate folders as seperate xml files
+                        with open('data.xml.zip', 'wb') as f:
+                            f.write(gzip_file.content)
+                        with gzip.open('data.xml.zip', 'r') as f_in, open(path_xml, 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                        with open(path_xml, encoding='utf-8') as xml_file:
+                            data_dict = xmltodict.parse(xml_file.read(), encoding='utf-8')
+                    except gzip.BadGzipFile:
+                        with zipfile.ZipFile(io.BytesIO(gzip_file.content)) as zf:
+                            zf.extractall(path_month)
                 else:
                     with zipfile.ZipFile(io.BytesIO(gzip_file.content)) as zf:
-                        zf.extract(filename, path_xml)
+                        zf.extractall(path_month)
                 
 
 if not os.path.exists('data_monthly_updates'):
     os.mkdir('data_monthly_updates')
     downloadMonths()
-elif os.path.exists('data_monthly_updates') and os.listdir('data_monthly_updates') != len(MONTHS_URLS):
+elif os.path.exists('data_monthly_updates') and len(os.listdir('data_monthly_updates')) != len(MONTHS_URLS):
     downloadMonths()

@@ -10,7 +10,7 @@ import xmltodict
 from pymongo import MongoClient
 from tqdm import tqdm
 
-from search import get_all_trains_on_route  # status bar for load progress
+from search import get_all_trains_ids_on_route  # status bar for load progress
 
 # CONSTANTS
 MAIN_URL = "https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/GVD2022.zip"
@@ -203,7 +203,7 @@ def update_for_month(month_dir, month_path):
         )
 
 
-def print_all_train_routes(loc_from, loc_to):
+def print_all_train_routes(loc_from, loc_to, all_trains_ids):
     find = {"_id": {"$in": all_trains_ids}}
     all_trains = collection_name.find(find)
     all_trains_count = collection_name.count_documents(find)
@@ -234,7 +234,9 @@ if __name__ == "__main__":
     loc_from = "Vyškov na Moravě"
     loc_to = "Brno hl. n."
 
-    all_trains_ids = get_all_trains_on_route(name_to_id_collection, loc_from, loc_to)
-    print_all_train_routes(loc_from, loc_to)
+    all_trains_ids = get_all_trains_ids_on_route(
+        name_to_id_collection, loc_from, loc_to
+    )
+    print_all_train_routes(loc_from, loc_to, all_trains_ids)
 
     # truncate_db()

@@ -8,7 +8,9 @@ import bs4
 import requests
 import xmltodict
 from pymongo import MongoClient
-from tqdm import tqdm  # status bar for load progress
+from tqdm import tqdm
+
+from search import get_all_trains_on_route  # status bar for load progress
 
 # CONSTANTS
 MAIN_URL = "https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/GVD2022.zip"
@@ -143,7 +145,7 @@ def append_locations_train_id(location_names, train_id):
     if location_names:
         name_to_id_collection.update_many(
             {"PrimaryLocationName": {"$in": location_names}},
-            {"$push": {"train_ids": train_id}},
+            {"$push": {"TrainIds": train_id}},
         )
 
 
@@ -201,11 +203,24 @@ def update_for_month(month_dir, month_path):
         )
 
 
+def print_all_train_routes(loc_from, loc_to):
+    find = {"_id": {"$in": all_trains_ids}}
+    all_trains = collection_name.find(find)
+    all_trains_count = collection_name.count_documents(find)
+    print(f"All trains: ")
+    for i, train in enumerate(all_trains, start=1):
+        print(f"Train {i}:")
+        for location in train["CZPTTCISMessage"]["CZPTTInformation"]["CZPTTLocation"]:
+            print(location["Location"]["PrimaryLocationName"])
+        print()
+    print(f"Num of all trains from {loc_from} to {loc_to}: {all_trains_count}")
+
+
 if __name__ == "__main__":
     # Download and extract main 2022 xml files from zip
     extract_main_data()
     # Upload main 2022 data from xml to db
-    store_main_data_to_db()
+    # store_main_data_to_db()
 
     # Donwload all monthly updates
     if not os.path.exists(MONTHS_PATH):
@@ -215,6 +230,11 @@ if __name__ == "__main__":
         download_monthly_updates()
 
     # Update DB with monthly updates ie. cancellations and re-routes
-    update_db_by_all_monthly_updates()
+    # update_db_by_all_monthly_updates()
+    loc_from = "Vyškov na Moravě"
+    loc_to = "Brno hl. n."
 
-    truncate_db()
+    all_trains_ids = get_all_trains_on_route(name_to_id_collection, loc_from, loc_to)
+    print_all_train_routes(loc_from, loc_to)
+
+    # truncate_db()

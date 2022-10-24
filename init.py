@@ -184,17 +184,32 @@ def update_for_month(month_dir, month_path):
                 core_identifier = data_dict["CZCanceledPTTMessage"][
                     "PlannedTransportIdentifiers"
                 ][1]["Core"]
+                company_identifier = data_dict["CZCanceledPTTMessage"][
+                    "PlannedTransportIdentifiers"
+                ][1]["Company"]
+                year_identifier = data_dict["CZCanceledPTTMessage"][
+                    "PlannedTransportIdentifiers"
+                ][1]["TimetableYear"]
+
             else:
                 del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
                 del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
                 core_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
                     "PlannedTransportIdentifiers"
                 ][1]["Core"]
+                company_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
+                    "PlannedTransportIdentifiers"
+                ][1]["Company"]
+                year_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
+                    "PlannedTransportIdentifiers"
+                ][1]["TimetableYear"]
         # print(core_identifier)
         # TODO mozna staci predelat na update_one, find_and_update_one vraci navic puvodni nezmeneny dokument
         collection_name.find_one_and_update(
             {
                 "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Core": core_identifier,
+                "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Company": company_identifier,
+                "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": year_identifier,
                 "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.ObjectType": "TR",
             },
             {"$set": data_dict},
@@ -205,7 +220,7 @@ if __name__ == "__main__":
     # Download and extract main 2022 xml files from zip
     extract_main_data()
     # Upload main 2022 data from xml to db
-    store_main_data_to_db()
+    #store_main_data_to_db()
 
     # Donwload all monthly updates
     if not os.path.exists(MONTHS_PATH):
@@ -217,4 +232,5 @@ if __name__ == "__main__":
     # Update DB with monthly updates ie. cancellations and re-routes
     update_db_by_all_monthly_updates()
 
-    truncate_db()
+    #truncate_db()
+

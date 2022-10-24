@@ -207,62 +207,32 @@ def update_for_month(month_dir, month_path):
                     {"$set": data_dict},
                 )
 
-            else:
-                # Changed timetable wasn't odklonovy 
-                try:
-                    del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
-                    del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
-                    core_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "PlannedTransportIdentifiers"
-                    ][0]["Core"]
-                    company_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "PlannedTransportIdentifiers"
-                    ][0]["Company"]
-                    year_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "PlannedTransportIdentifiers"
-                    ][0]["TimetableYear"]
-                    variant_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "PlannedTransportIdentifiers"
-                    ][0]["Variant"]
+            else: 
+                del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
+                del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
+                core_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
+                    "PlannedTransportIdentifiers"
+                ][0]["Core"]
+                company_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
+                    "PlannedTransportIdentifiers"
+                ][0]["Company"]
+                year_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
+                    "PlannedTransportIdentifiers"
+                ][0]["TimetableYear"]
+                variant_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
+                    "PlannedTransportIdentifiers"
+                ][0]["Variant"]
 
-                    collection_name.update_one(
-                        {
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Core": core_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Company": company_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": year_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": variant_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.ObjectType": "PA",
-                        },
-                        {"$set": data_dict},
-                    )
-                
-                # Changed timetable wasn't odklonovy 
-                except:
-                    del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
-                    del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
-                    core_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "RelatedPlannedTransportIdentifiers"
-                    ]["Core"]
-                    company_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "RelatedPlannedTransportIdentifiers"
-                    ]["Company"]
-                    year_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "RelatedPlannedTransportIdentifiers"
-                    ]["TimetableYear"]
-                    variant_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
-                        "RelatedPlannedTransportIdentifiers"
-                    ]["Variant"]
-
-                    collection_name.update_one(
-                        {
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Core": core_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Company": company_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": year_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": variant_identifier,
-                            "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.ObjectType": "PA",
-                        },
-                        {"$set": data_dict},
-                    )
+                collection_name.update_one(
+                    {
+                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Core": core_identifier,
+                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Company": company_identifier,
+                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": year_identifier,
+                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": variant_identifier,
+                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.ObjectType": "PA",
+                    },
+                    {"$set": data_dict},
+                )
         # print(core_identifier)
         # TODO mozna staci predelat na update_one, find_and_update_one vraci navic puvodni nezmeneny dokument
 

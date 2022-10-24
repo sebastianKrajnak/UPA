@@ -2,12 +2,13 @@ import gzip
 import io
 import os
 import shutil
+from time import time
 import zipfile
 
 import bs4
 import requests
 import xmltodict
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from tqdm import tqdm
 
 from search import get_all_trains_ids_on_route  # status bar for load progress
@@ -92,6 +93,7 @@ def extract_main_data():
 
 
 def store_main_data_to_db():
+    all_data = []
     for file in tqdm(os.listdir(MAIN_PATH), desc="Creating database: "):
         path = os.path.join(MAIN_PATH, file)
         with open(path, encoding="utf-8") as xml_file:
@@ -99,7 +101,12 @@ def store_main_data_to_db():
             # Remove unnecessary tags
             del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
             del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
-            collection_name.insert_one(data_dict)
+            all_data.append(data_dict)
+    print("Inserting documents to db...")
+    collection_name.insert_many(all_data)
+
+    number_of_documents = collection_name.count_documents({})
+    print(f"Number of documents: {number_of_documents}")
 
 
 def json_extract(obj, key):
@@ -135,6 +142,7 @@ def update_db_by_all_monthly_updates():
 
 
 def update_for_month(month_dir, month_path):
+    monthly_updates = []
     for file in tqdm(
         os.listdir(month_path), desc=f"Updating database according to {month_dir}: "
     ):
@@ -156,18 +164,6 @@ def update_for_month(month_dir, month_path):
                 variant_identifier = data_dict["CZCanceledPTTMessage"][
                     "PlannedTransportIdentifiers"
                 ][0]["Variant"]
-
-                collection_name.update_one(
-                    {
-                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Core": core_identifier,
-                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Company": company_identifier,
-                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": year_identifier,
-                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.TimetableYear": variant_identifier,
-                        "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.ObjectType": "PA",
-                    },
-                    {"$set": data_dict},
-                )
-
             else:
                 del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
                 del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
@@ -183,8 +179,8 @@ def update_for_month(month_dir, month_path):
                 variant_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
                     "PlannedTransportIdentifiers"
                 ][0]["Variant"]
-
-                collection_name.update_one(
+            monthly_updates.append(
+                UpdateOne(
                     {
                         "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Core": core_identifier,
                         "CZPTTCISMessage.Identifiers.PlannedTransportIdentifiers.Company": company_identifier,
@@ -194,7 +190,13 @@ def update_for_month(month_dir, month_path):
                     },
                     {"$set": data_dict},
                 )
-        # print(core_identifier)
+            )
+    print("Bulk write...")
+    # start = time()
+    collection_name.bulk_write(monthly_updates)
+    # end = time()
+    # print(f"Inserting time: {end - start}s")
+    # print(core_identifier)
 
 
 def print_all_train_routes(loc_from, loc_to, all_trains_ids):
@@ -240,10 +242,11 @@ def create_location_to_train_id_collection():
 
 
 if __name__ == "__main__":
+    start = time()
     # Download and extract main 2022 xml files from zip
     extract_main_data()
     # Upload main 2022 data from xml to db
-    # store_main_data_to_db()
+    store_main_data_to_db()
 
     # # Donwload all monthly updates
     # if not os.path.exists(MONTHS_PATH):
@@ -253,9 +256,9 @@ if __name__ == "__main__":
     #     download_monthly_updates()
 
     # # Update DB with monthly updates ie. cancellations and re-routes
-    # update_db_by_all_monthly_updates()
+    update_db_by_all_monthly_updates()
 
-    # create_location_to_train_id_collection()
+    create_location_to_train_id_collection()
     # loc_from = "Vyškov na Moravě"
     # loc_to = "Brno hl. n."
 
@@ -263,6 +266,8 @@ if __name__ == "__main__":
     #     name_to_id_collection, loc_from, loc_to
     # )
     # print_all_train_routes(loc_from, loc_to, all_trains_ids)
+    end = time()
+    print(f"Script running time: {end - start}s")
 
     # truncate_db()
 

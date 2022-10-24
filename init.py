@@ -99,25 +99,7 @@ def store_main_data_to_db():
             # Remove unnecessary tags
             del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
             del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
-
-            item = collection_name.insert_one(data_dict)
-            item_locations = json_extract(data_dict, "PrimaryLocationName")
-            item_locations_in_db = name_to_id_collection.find(
-                {"PrimaryLocationName": {"$in": item_locations}}
-            )
-            item_locations_in_db = [
-                item["PrimaryLocationName"] for item in item_locations_in_db
-            ]
-            item_locations_to_add = [
-                item for item in item_locations if item not in item_locations_in_db
-            ]
-            insert_locations_train_id(item_locations_to_add, item.inserted_id)
-            append_locations_train_id(item_locations_in_db, item.inserted_id)
-
-    number_of_documents = name_to_id_collection.count_documents({})
-    print(f"Number of documents: {number_of_documents}")
-    # items = name_to_id_collection.find({"train_ids.1": {"$exists": True}})
-    # print(len(items))
+            collection_name.insert_one(data_dict)
 
 
 def json_extract(obj, key):
@@ -139,27 +121,6 @@ def json_extract(obj, key):
 
     values = extract(obj, vals, key)
     return list(values)
-
-
-def append_locations_train_id(location_names, train_id):
-    if location_names:
-        name_to_id_collection.update_many(
-            {"PrimaryLocationName": {"$in": location_names}},
-            {"$push": {"TrainIds": train_id}},
-        )
-
-
-def insert_locations_train_id(location_names, train_id):
-    if location_names:
-        name_to_id_collection.insert_many(
-            [
-                {
-                    "PrimaryLocationName": location_name,
-                    "TrainIds": [train_id],
-                }
-                for location_name in location_names
-            ]
-        )
 
 
 def truncate_db():
@@ -207,7 +168,7 @@ def update_for_month(month_dir, month_path):
                     {"$set": data_dict},
                 )
 
-            else: 
+            else:
                 del data_dict["CZPTTCISMessage"]["@xmlns:xsi"]
                 del data_dict["CZPTTCISMessage"]["@xmlns:xsd"]
                 core_identifier = data_dict["CZPTTCISMessage"]["Identifiers"][
@@ -234,7 +195,7 @@ def update_for_month(month_dir, month_path):
                     {"$set": data_dict},
                 )
         # print(core_identifier)
-        # TODO mozna staci predelat na update_one, find_and_update_one vraci navic puvodni nezmeneny dokument
+
 
 def print_all_train_routes(loc_from, loc_to, all_trains_ids):
     find = {"_id": {"$in": all_trains_ids}}
@@ -249,27 +210,69 @@ def print_all_train_routes(loc_from, loc_to, all_trains_ids):
     print(f"Num of all trains from {loc_from} to {loc_to}: {all_trains_count}")
 
 
+def create_location_to_train_id_collection():
+    locations_to_route_ids = {}
+    all_routes = collection_name.find({})
+    number_of_documents = collection_name.count_documents({})
+    for route in tqdm(
+        all_routes,
+        desc="Creating location to route id collection ",
+        total=number_of_documents,
+    ):
+        locations = json_extract(route, "PrimaryLocationName")
+        for location in locations:
+            if not location in locations_to_route_ids.keys():
+                locations_to_route_ids[location] = {
+                    "PrimaryLocationName": location,
+                    "TrainIds": [route["_id"]],
+                }
+            else:
+                locations_to_route_ids[location]["TrainIds"].append(route["_id"])
+
+    locations_to_route_ids = [document for document in locations_to_route_ids.values()]
+    name_to_id_collection.insert_many(locations_to_route_ids)
+
+    number_of_documents = name_to_id_collection.count_documents({})
+    print(f"Number of documents: {number_of_documents}")
+    # items = name_to_id_collection.find({"TrainIds.1": {"$exists": True}}).count()
+    # for item in items:
+    #     print(item)
+
+
 if __name__ == "__main__":
     # Download and extract main 2022 xml files from zip
     extract_main_data()
     # Upload main 2022 data from xml to db
-    #store_main_data_to_db()
+    # store_main_data_to_db()
 
-    # Donwload all monthly updates
-    if not os.path.exists(MONTHS_PATH):
-        os.mkdir(MONTHS_PATH)
-        download_monthly_updates()
-    elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
-        download_monthly_updates()
+    # # Donwload all monthly updates
+    # if not os.path.exists(MONTHS_PATH):
+    #     os.mkdir(MONTHS_PATH)
+    #     download_monthly_updates()
+    # elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
+    #     download_monthly_updates()
 
-    # Update DB with monthly updates ie. cancellations and re-routes
-    update_db_by_all_monthly_updates()
-    """ loc_from = "Vyškov na Moravě"
-    loc_to = "Brno hl. n."
+    # # Update DB with monthly updates ie. cancellations and re-routes
+    # update_db_by_all_monthly_updates()
 
-    all_trains_ids = get_all_trains_ids_on_route(
-        name_to_id_collection, loc_from, loc_to
-    )
-    print_all_train_routes(loc_from, loc_to, all_trains_ids) """
+    # create_location_to_train_id_collection()
+    # loc_from = "Vyškov na Moravě"
+    # loc_to = "Brno hl. n."
+
+    # all_trains_ids = get_all_trains_ids_on_route(
+    #     name_to_id_collection, loc_from, loc_to
+    # )
+    # print_all_train_routes(loc_from, loc_to, all_trains_ids)
 
     # truncate_db()
+
+    # number_of_documents = name_to_id_collection.count_documents(
+    #     {"TrainIds.502": {"$exists": True}}
+    # )
+    # print(f"Number of documents: {number_of_documents}")
+    # documents = name_to_id_collection.find({"TrainIds.502": {"$exists": True}})
+    # for document in documents:
+    #     doc_name = document["PrimaryLocationName"]
+    #     doc_len = len(document["TrainIds"])
+    #     print(f"Document {doc_name}: {doc_len}")
+    # name_to_id_collection.delete_many({})

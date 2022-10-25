@@ -242,20 +242,22 @@ if __name__ == "__main__":
     # Download and extract main 2022 xml files from zip
     extract_main_data()
     # Upload main 2022 data from xml to db
-    # store_main_data_to_db()
+    store_main_data_to_db()
 
-    # # Donwload all monthly updates
-    # if not os.path.exists(MONTHS_PATH):
-    #     os.mkdir(MONTHS_PATH)
-    #     download_monthly_updates()
-    # elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
-    #     download_monthly_updates()
+    # Donwload all monthly updates
+    if not os.path.exists(MONTHS_PATH):
+        os.mkdir(MONTHS_PATH)
+        download_monthly_updates()
+    elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
+        download_monthly_updates()
 
-    # # Update DB with monthly updates ie. cancellations and re-routes
-    # update_db_by_all_monthly_updates()
+    # Update DB with monthly updates ie. cancellations and re-routes
+    update_db_by_all_monthly_updates()
 
-    # create_location_to_train_id_collection()
-    loc_from = "Luleč"
+    create_location_to_train_id_collection()
+
+    # Uncomment to test without cli app
+    """ loc_from = "Luleč"
     loc_to = "Brno hl. n."
     date_from = datetime(2022, 10, 1)
     date_to = datetime(2022, 10, 5)
@@ -278,7 +280,7 @@ if __name__ == "__main__":
     list_filtered_connections_with_time(routes)
     end = time()
     print(f"Script running time: {end - start}s")
-
+ """
     # truncate_db()
 
     # number_of_documents = name_to_id_collection.count_documents(

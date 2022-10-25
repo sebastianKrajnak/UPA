@@ -255,8 +255,8 @@ if __name__ == "__main__":
     # update_db_by_all_monthly_updates()
 
     # create_location_to_train_id_collection()
-    loc_from = "Luleč"
-    loc_to = "Brno hl. n."
+    loc_from = "Plzeň"
+    loc_to = "Opava"
     date_from = datetime(2022, 10, 1)
     date_to = datetime(2022, 10, 5)
 

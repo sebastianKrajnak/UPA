@@ -45,27 +45,32 @@ def download_monthly_updates():
         # Create a subfolder for each month
         month_n = month.split("/")[-1]
         path_month = os.path.join(MONTHS_PATH, month_n)
-        if os.path.exists(path_month):
-            continue
-
-        os.mkdir(path_month)
-        # Download all gziped files
         r = requests.get(month)
         data = bs4.BeautifulSoup(r.text, "html.parser")
+        xml_file_links = data.find_all("a")
 
-        for l in tqdm(data.find_all("a"), desc="Extracting " + month_n):
-            url = "https://portal.cisjr.cz" + l["href"]
-            # The very first link is a return to previous folder link which breaks the conversion
-            if l["href"] == "/pub/draha/celostatni/szdc/2022/":
-                continue
-            extract_month(path_month, url)
+        if not os.path.exists(path_month):
+            os.mkdir(path_month)
 
+        if os.path.exists(path_month) and len(os.listdir(path_month)) == len(xml_file_links) - 1:
+            continue
+        
+        elif os.path.exists(path_month) and len(os.listdir(path_month)) != len(xml_file_links) - 1:
+            # Download all gziped files
+            for l in tqdm(xml_file_links, desc="Extracting " + month_n):
+                url = "https://portal.cisjr.cz" + l["href"]
+                # The very first link is a return to previous folder link which breaks the conversion
+                if l["href"] == "/pub/draha/celostatni/szdc/2022/":
+                    continue
+                extract_month(path_month, url)
 
 def extract_month(path_month, url):
     gzip_file = requests.get(url)
     zip_filename = url.split("/")[-1]
     xml_filename = zip_filename.removesuffix(".zip")
     path_xml = os.path.join(path_month, xml_filename)
+    if os.path.exists(path_xml):
+        return
 
     if ".xml.zip" in zip_filename:
         try:
@@ -246,19 +251,19 @@ if __name__ == "__main__":
     # Download and extract main 2022 xml files from zip
     extract_main_data()
     # Upload main 2022 data from xml to db
-    store_main_data_to_db()
+    # store_main_data_to_db()
 
     # # Donwload all monthly updates
-    # if not os.path.exists(MONTHS_PATH):
-    #     os.mkdir(MONTHS_PATH)
-    #     download_monthly_updates()
-    # elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
-    #     download_monthly_updates()
+    if not os.path.exists(MONTHS_PATH):
+        os.mkdir(MONTHS_PATH)
+        download_monthly_updates()
+    elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
+        download_monthly_updates()
 
     # # Update DB with monthly updates ie. cancellations and re-routes
-    update_db_by_all_monthly_updates()
+    # update_db_by_all_monthly_updates()
 
-    create_location_to_train_id_collection()
+    # create_location_to_train_id_collection()
     # loc_from = "Vyškov na Moravě"
     # loc_to = "Brno hl. n."
 

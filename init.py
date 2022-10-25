@@ -1,3 +1,4 @@
+from datetime import datetime
 import gzip
 import io
 import os
@@ -11,7 +12,15 @@ import xmltodict
 from pymongo import MongoClient, UpdateOne
 from tqdm import tqdm
 
-from search import get_all_trains_ids_on_route  # status bar for load progress
+from search import (
+    filter_by_time,
+    filter_by_train_activity,
+    filter_out_reverse_connections,
+    get_all_trains_ids_on_route,
+    get_dates_by_bitmap,
+    list_filtered_connections_with_time,
+)
+from shared_globals import json_extract
 
 # CONSTANTS
 MAIN_URL = "https://portal.cisjr.cz/pub/draha/celostatni/szdc/2022/GVD2022.zip"
@@ -31,14 +40,6 @@ MONTHS_URLS = [
 MONTHS_PATH = "data_monthly_updates"
 MAIN_PATH = "data_main"
 
-# Create MongoDB client running locally on Docker
-client = MongoClient("localhost", 27017)
-# Create database if it doesn't exist
-db = client["timetables"]
-# Create collections in a db if they don't exist
-collection_name = db["timetables_2022"]
-name_to_id_collection = db["name_to_id"]
-
 
 def download_monthly_updates():
     for month in tqdm(MONTHS_URLS, desc="Extracting monthly updates total: "):
@@ -52,10 +53,16 @@ def download_monthly_updates():
         if not os.path.exists(path_month):
             os.mkdir(path_month)
 
-        if os.path.exists(path_month) and len(os.listdir(path_month)) == len(xml_file_links) - 1:
+        if (
+            os.path.exists(path_month)
+            and len(os.listdir(path_month)) == len(xml_file_links) - 1
+        ):
             continue
-        
-        elif os.path.exists(path_month) and len(os.listdir(path_month)) != len(xml_file_links) - 1:
+
+        elif (
+            os.path.exists(path_month)
+            and len(os.listdir(path_month)) != len(xml_file_links) - 1
+        ):
             # Download all gziped files
             for l in tqdm(xml_file_links, desc="Extracting " + month_n):
                 url = "https://portal.cisjr.cz" + l["href"]
@@ -63,6 +70,7 @@ def download_monthly_updates():
                 if l["href"] == "/pub/draha/celostatni/szdc/2022/":
                     continue
                 extract_month(path_month, url)
+
 
 def extract_month(path_month, url):
     gzip_file = requests.get(url)
@@ -97,7 +105,7 @@ def extract_main_data():
             zf.extract(member, MAIN_PATH)
 
 
-def store_main_data_to_db():
+def store_main_data_to_db(collection_name):
     all_data = []
     for file in tqdm(os.listdir(MAIN_PATH), desc="Creating database: "):
         path = os.path.join(MAIN_PATH, file)
@@ -114,39 +122,18 @@ def store_main_data_to_db():
     print(f"Number of documents: {number_of_documents}")
 
 
-def json_extract(obj, key):
-    # Recursively fetch values from nested JSON.
-    vals = set()
-
-    def extract(obj, vals, key):
-        # Recursively search for values of key in JSON tree.
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                if isinstance(v, (dict, list)):
-                    extract(v, vals, key)
-                elif k == key:
-                    vals.add(v)
-        elif isinstance(obj, list):
-            for item in obj:
-                extract(item, vals, key)
-        return vals
-
-    values = extract(obj, vals, key)
-    return list(values)
-
-
 def truncate_db():
     collection_name.delete_many({})
     name_to_id_collection.delete_many({})
 
 
-def update_db_by_all_monthly_updates():
+def update_db_by_all_monthly_updates(collection_name):
     for month_dir in os.listdir(MONTHS_PATH):
         month_path = os.path.join(MONTHS_PATH, month_dir)
-        update_for_month(month_dir, month_path)
+        update_for_month(collection_name, month_dir, month_path)
 
 
-def update_for_month(month_dir, month_path):
+def update_for_month(collection_name, month_dir, month_path):
     monthly_updates = []
     for file in tqdm(
         os.listdir(month_path), desc=f"Updating database according to {month_dir}: "
@@ -204,10 +191,7 @@ def update_for_month(month_dir, month_path):
     # print(core_identifier)
 
 
-def print_all_train_routes(loc_from, loc_to, all_trains_ids):
-    find = {"_id": {"$in": all_trains_ids}}
-    all_trains = collection_name.find(find)
-    all_trains_count = collection_name.count_documents(find)
+def print_all_train_routes(loc_from, loc_to, all_trains, all_trains_count):
     print(f"All trains: ")
     for i, train in enumerate(all_trains, start=1):
         print(f"Train {i}:")
@@ -217,7 +201,7 @@ def print_all_train_routes(loc_from, loc_to, all_trains_ids):
     print(f"Num of all trains from {loc_from} to {loc_to}: {all_trains_count}")
 
 
-def create_location_to_train_id_collection():
+def create_location_to_train_id_collection(collection_name, name_to_id_collection):
     locations_to_route_ids = {}
     all_routes = collection_name.find({})
     number_of_documents = collection_name.count_documents({})
@@ -247,6 +231,13 @@ def create_location_to_train_id_collection():
 
 
 if __name__ == "__main__":
+    # Create MongoDB client running locally on Docker
+    client = MongoClient("localhost", 27017)
+    # Create database if it doesn't exist
+    db = client["timetables"]
+    # Create collections in a db if they don't exist
+    collection_name = db["timetables_2022"]
+    name_to_id_collection = db["name_to_id"]
     start = time()
     # Download and extract main 2022 xml files from zip
     extract_main_data()
@@ -254,23 +245,37 @@ if __name__ == "__main__":
     # store_main_data_to_db()
 
     # # Donwload all monthly updates
-    if not os.path.exists(MONTHS_PATH):
-        os.mkdir(MONTHS_PATH)
-        download_monthly_updates()
-    elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
-        download_monthly_updates()
+    # if not os.path.exists(MONTHS_PATH):
+    #     os.mkdir(MONTHS_PATH)
+    #     download_monthly_updates()
+    # elif len(os.listdir(MONTHS_PATH)) != len(MONTHS_URLS):
+    #     download_monthly_updates()
 
     # # Update DB with monthly updates ie. cancellations and re-routes
     # update_db_by_all_monthly_updates()
 
     # create_location_to_train_id_collection()
-    # loc_from = "Vyškov na Moravě"
-    # loc_to = "Brno hl. n."
+    loc_from = "Luleč"
+    loc_to = "Brno hl. n."
+    date_from = datetime(2022, 10, 1)
+    date_to = datetime(2022, 10, 5)
 
-    # all_trains_ids = get_all_trains_ids_on_route(
-    #     name_to_id_collection, loc_from, loc_to
-    # )
-    # print_all_train_routes(loc_from, loc_to, all_trains_ids)
+    all_trains_ids = get_all_trains_ids_on_route(
+        name_to_id_collection, loc_from, loc_to
+    )
+    find = {"_id": {"$in": all_trains_ids}}
+    all_trains = collection_name.find(find)
+    all_trains_count = collection_name.count_documents(find)
+    # print_all_train_routes(loc_from, loc_to, all_trains, all_trains_count)
+
+    print(f"Number of all trains between stations: {all_trains_count}")
+    routes = filter_out_reverse_connections(all_trains, loc_from, loc_to)
+    print(f"Number of trains matching after reverse filter: {len(routes)}")
+    routes = filter_by_time(routes, date_from, date_to)
+    print(f"Number of trains matching after time filter: {len(routes)}")
+    routes = filter_by_train_activity(routes, loc_from, loc_to)
+    print(f"Number of trains matching after stops filter: {len(routes)}")
+    list_filtered_connections_with_time(routes)
     end = time()
     print(f"Script running time: {end - start}s")
 

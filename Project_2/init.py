@@ -71,6 +71,19 @@ only_one_unique = df.nunique()[df.nunique() == 1].index
 print("\nNumber of unique entries for each attribute:\n", df.nunique())
 print("\nAttributes with only one unique value: ", only_one_unique.tolist())
 
+# 3.1 ODSTRAŇTE Z DATOVÉ SADY ATRIBUTY, KTERÉ JSOU PRO DANOU DOLOVACÍ ÚLOHU IRELEVANTNÍ. ------------------------------------------------------
+# task 3.5 and 2.5 are switched for easier correlation analysis
+drop_atrs = only_one_unique.tolist() + [
+    "Delta 15 N (o/oo)",
+    "Delta 13 C (o/oo)",
+    "Comments",
+    "Sample Number",
+    "studyName",
+    "Individual ID",
+    "Date Egg",
+    "Clutch Completion",
+]
+df.drop(drop_atrs, axis=1, inplace=True)
 
 # 2.5 PROVEĎTE KORELAČNÍ ANALÝZU NUMERICKÝCH ATRIBUTŮ -----------------------------------------------------------------------------------------
 # Pairplot (matica bodovycch grafov) for numerical attributes
@@ -86,16 +99,6 @@ plt.show()
 sns.heatmap(df.corr(), annot=True)
 plt.show()
 
-# 3.1 ODSTRAŇTE Z DATOVÉ SADY ATRIBUTY, KTERÉ JSOU PRO DANOU DOLOVACÍ ÚLOHU IRELEVANTNÍ. ------------------------------------------------------
-drop_atrs = only_one_unique.tolist() + [
-    "Delta 15 N (o/oo)",
-    "Delta 13 C (o/oo)",
-    "Comments",
-    "Sample Number",
-    "studyName",
-    "Individual ID",
-]
-df.drop(drop_atrs, axis=1, inplace=True)
 
 # 3.2 VYPOŘÁDEJTE SE S CHYBĚJÍCÍMI HODNOTAMI. PRO ODSTRANĚNÍ TĚCHTO HODNOT VYUŽIJTE ALESPOŇ DVĚ RŮZNÉ
 # METODY PRO ODSTRANĚNÍ CHYBĚJÍCÍCH HODNOT. ------------------------------------------------------------------------------------------------

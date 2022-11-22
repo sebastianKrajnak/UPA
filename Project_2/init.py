@@ -91,7 +91,10 @@ sns.pairplot(df)
 
 # Pairplot (matica bodovycch grafov) for categorical attributes
 sns.pairplot(df, hue="Sex")
-sns.pairplot(df, hue="Species")
+g = sns.pairplot(df, hue="Species")
+handles = g._legend_data.values()
+labels = g._legend_data.keys()
+g.fig.legend(handles=handles, labels=labels, loc="lower left", ncol=3)
 
 plt.show()
 
@@ -104,7 +107,6 @@ plt.show()
 # METODY PRO ODSTRANĚNÍ CHYBĚJÍCÍCH HODNOT. ------------------------------------------------------------------------------------------------
 # 3.3 VYPOŘÁDEJTE SE S ODLEHLÝMI HODNOTAMI, JSOU-LI V DATOVÉ SADĚ PŘÍTOMNY.
 #   nope there are none
-
 
 # No. of unique value for Sex is 3 which is quite unusual for sex, upon displaying the unique values we see that it has corrupt data
 # as . is not a Sex category, we shall replace . with MALE

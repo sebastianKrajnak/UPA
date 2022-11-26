@@ -1,18 +1,11 @@
+import sys
 import requests
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
 
-def get_urls_from_args():
-    # TODO
-    pass
-
-
-# jen pro testovaci ucely, nakonec smazat
-def get_10_urls_from_file():
-    with open('urls.txt', 'r') as f:
-        urls = [line[:-1] for line in f.readlines()]
-    return urls[:10]
+def get_urls_from_stdin():
+    return [line[:-1] for line in sys.stdin.readlines()]
 
 
 def get_data_from_urls(urls):
@@ -32,8 +25,7 @@ def write_data(data):
         
 
 if __name__ == "__main__":
-    # urls = get_urls_from_args()
-    urls = get_10_urls_from_file()
+    urls = get_urls_from_stdin()
     data = get_data_from_urls(urls)
     write_data(data)
     

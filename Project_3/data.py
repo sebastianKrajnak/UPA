@@ -15,18 +15,17 @@ def get_data_from_urls(urls):
         soup = BeautifulSoup(r.content, "html.parser")
         game_name = soup.find("h1", class_="title-h1").contents[0]
         price = soup.find("div", class_="detail__price").contents[0]
-        data.append((url, game_name, price))
+        priceFloat = float(str(price).replace(" Kč", "").replace("\xa0", ""))
+        data.append((url, game_name, priceFloat))
     return data
 
 
 def write_data(data):
     df = DataFrame.from_records(data)
-    df.to_csv("data.tsv", sep="\t", header=False, index=False)
-        
+    df.to_csv("dataDemo20.tsv", sep="\t", header=False, index=False)
+
 
 if __name__ == "__main__":
     urls = get_urls_from_stdin()
     data = get_data_from_urls(urls)
     write_data(data)
-    
-

@@ -21,7 +21,7 @@ def get_games():
 
 
 def write_urls(urls):
-    with open('urls.txt', 'w') as f:
+    with open('urlsDemo20.txt', 'w') as f:
         f.write('\n'.join(urls))
         
 

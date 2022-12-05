@@ -15,7 +15,7 @@ def get_data_from_urls(urls):
         soup = BeautifulSoup(r.content, "html.parser")
         game_name = soup.find("h1", class_="title-h1").contents[0]
         price = soup.find("div", class_="detail__price").contents[0]
-        priceFloat = float(str(price).replace(" Kč", "").replace("\xa0", ""))
+        priceFloat = float(str(price).replace("\xa0", "")[:-3])
         data.append((url, game_name, priceFloat))
     return data
 

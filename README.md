@@ -10,7 +10,7 @@ Points: 8/8 but 45 day wait, Rychly do be Rychly
 
 The main goal of the project was performing exploratory analysis on the selected data set, [penguins](https://www.kaggle.com/datasets/parulpandey/palmer-archipelago-antarctica-penguin-data?resource=download) then editing the data set into a form suitable for mining and classification of penguin species based on other attributes or cluster analysis.
 
-Points: GDE BODY DO PICE REEEEE
+Points: 8/8
 
 ## Project 3 - Web scraping
 
